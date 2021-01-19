@@ -163,3 +163,45 @@ def rand_wellID(df):
         newID = get_rand(dt['destWell'])
         dt['destWell'][n]=newID
     return dt
+
+class Plate():
+    """
+    Class for the whole experiment's plate
+    """
+    def __init__(self):
+        self.plateData = {
+            'sourceID':[],
+            'sourceWell':[],
+            'destID':[], # destination plate ID
+            'destWell':[],
+            'transferVol':[],
+            'backfillVol':[],
+            'compound':[]
+        }
+        self.plate = pd.DataFrame.from_dict(self.plateData)
+        self.meta = None
+        self.all = None
+
+    def joinRow(self, df):
+        """
+        Joins df onto the plate
+        """
+        return True
+    
+    def addControl(self):
+        """
+        adds positive and negative control wells to plate dataframe
+        """
+        return True
+
+    def save_csv(self, plateName, metaName, allName,path):
+        """
+        Saves dataframes to csv of provided name in selected path
+        args:
+            plateName - destination plate id
+            metaName - name for plate meta data
+            allName - name for whole thing, whatever
+        returns:
+            True if saved
+        """
+        return True
