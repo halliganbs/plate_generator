@@ -4,6 +4,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from ipyfilechooser import FileChooser
+
 # filler is DSMO
 well_rows = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'] # non-control rows
 well_cols = [str(x) for x in range(1, 25)] # non-contorl columns
@@ -13,6 +15,21 @@ well_cols = [str(x) for x in range(1, 25)] # non-contorl columns
 sourceID, sourceWell, destID will be the same for the entire table
 destWell, transferVol, backFillVol will be differenet
 """
+
+def make_chooser(title='Choose File'):
+    """
+    creates a jupyter notebook filechooser
+    args:
+        title - title of file chooser
+    return:
+        fc - new file chooser for selecting dirs with title 
+    """
+    fc = FileChooser()
+    fc.show_hidden = True
+    fc.use_dir_icons = True
+    fc.show_only_dirs = True
+    fc.title = title
+    return fc
 
 def cal_transVol(max_back, dilute, steps):
     """
