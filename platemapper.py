@@ -123,10 +123,7 @@ class Plate:
         self.compounds.append(self.make_compound(destplate, max_back, dilute, sId, sW, comp, col, row))
         print(f'Added Compound: {comp}')
 
-        self.fc = self.make_chooser('output directory')
-        self.fc.register_callback(self._out_handler)
-        self.sp = None
-
+        
     def cal_transVol(self, max_back, dilute, steps):
         """
         calculates the transfer volume and backfill volume of compound to filler
