@@ -13,9 +13,9 @@ well_rows = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'] # 
 well_cols = [str(x).zfill(2) for x in range(1, 25)] # columns with zero padding
 
 options ={
-    'control':open('images/control.PNG', 'rb').read(),
-    '1 Well Border':open('images/border1.PNG', 'rb').read(),
-    '2 Well Border':open('images/border2.PNG', 'rb').read()
+    'control':open('plate_generator/images/control.PNG', 'rb').read(),
+    '1 Well Border':open('plate_generator/images/border1.PNG', 'rb').read(),
+    '2 Well Border':open('plate_generator/images/border2.PNG', 'rb').read()
 }
 
 SOURCE = 'data/20181012-L1700-Selleck-Bioactive-Compound-Library-384.csv'
