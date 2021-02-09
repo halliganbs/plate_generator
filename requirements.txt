@@ -1,6 +1,8 @@
-numpy==1.18.5
+numpy==1.19.2
 matplotlib==3.3.3
 ipywidgets==7.6.2
 ipyfilechooser==0.4.1
 seaborn==0.11.1
 pandas==1.1.5
+folium==0.2.1
+imgaug<0.2.7,>=0.2.5
