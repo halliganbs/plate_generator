@@ -131,6 +131,3 @@ dmypy.json
 # out files
 /out
 
-# data
-*.csv
-/data
