@@ -13,9 +13,9 @@ well_rows = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'] # 
 well_cols = [str(x).zfill(2) for x in range(1, 25)] # columns with zero padding
 
 options ={
-    'control':open('plate_generator/images/control.PNG', 'rb').read(),
-    '1 Well Border':open('plate_generator/images/border1.PNG', 'rb').read(),
-    '2 Well Border':open('plate_generator/images/border2.PNG', 'rb').read()
+    'control':open('images/control.PNG', 'rb').read(),
+    '1 Well Border':open('images/border1.PNG', 'rb').read(),
+    '2 Well Border':open('images/border2.PNG', 'rb').read()
 }
 
 SOURCE = 'data/20181012-L1700-Selleck-Bioactive-Compound-Library-384.csv'
@@ -48,7 +48,15 @@ class Plate:
     # destination plate id
     destField = Text(value='',placeholder='Destination Plate', description='Destination')
     # max transfer vol
-    fillField = Text(value='',placeholder='0.0', description='Transfer Vol')
+    # Text(value='',placeholder='0.0', description='Transfer Vol')
+    fillField = BoundedIntText(
+    value=0.0,
+    min=125,
+    max=999999999,
+    desctription='Transfer Vol',
+    disable=False,
+    )
+
     # row and col selectors
     rowDrop = Dropdown(
         options = [('A',0),('B',1),('C',2),('D',3),('E',4),('F',5),('G',6),('H',7),('I',8),('J',9),('K',10),('L',11),('M',12),('N',13),('O',14),('P',15)],
@@ -102,18 +110,23 @@ class Plate:
 
     # lsit to hold compounds dataframes
     plate = {
-        'sourceID':[],
-        'sourceWell':[],
+        'sourceID':[], # source plateID
+        'sourceWell':[], # source well
         'destID':[], # destination plate ID0.0
-        'destWell':'',
-        'dilution':[],
-        'transferVol':[],
-        'backfillVol':[],
-        'compound':[]
+        'destWell':'', # destination well
+        'dilution (μM)':[], # well diultion
+        'transferVol (nL)':[], # compound vol transfered
+        'backfillVol (nL)':[], # DSMO backfill vol
+        'compound':[], # compound name
+        'concentration (mmol)':[] # concentration in well (start alwasy 10 millimolar)
     }
+    
 
     # constructor
     def __init__(self, source=None, out_dir=None):
+
+        # save plate dict
+        self.data = self.plate
 
         # check if file is selected
         if (source == None):
@@ -148,10 +161,11 @@ class Plate:
             'sourceWell':[],
             'destID':[], # destination plate ID0.0
             'destWell':'',
-            'dilution':[],
-            'transferVol':[],
-            'backfillVol':[],
-            'compound':[]
+            'dilution (μM)':[],
+            'transferVol (nL)':[],
+            'backfillVol (nL)':[],
+            'compound':[],
+            'concentration (mmol)':[]
         })
         self.compounds = []
         # disable permanant features
@@ -167,9 +181,9 @@ class Plate:
         returns GUI elements in a list for h or v box needs
         """
         return [
-            self.nameDrop, self.diluteDrop, self.destField, HBox([self.fillField, Label(value='nL')]), 
+            self.nameDrop, self.diluteDrop, self.destField, HBox([Label(value='Well Volume'),self.fillField, Label(value='nL')]), 
             VBox(
-                [HBox([self.dilval,Label(value='μmol')]),
+                [HBox([self.dilval,Label(value='μM')]),
                 HBox([Label(value='Steps'),self.stepsBound]), 
                 HBox([Label(value='Replicate'),
                 self.triplicateBound])]), 
@@ -193,7 +207,7 @@ class Plate:
         # user input values
         dilute = self.diluteDrop.value
         destplate = self.destField.value
-        max_back = int(float(self.fillField.value))
+        max_back = float(self.fillField.value)
         dilute = self.diluteDrop.value
         
         col = self.colDrop.value
@@ -222,11 +236,13 @@ class Plate:
         calculates the transfer volume and backfill volume of compound to filler
         args:
             max_back - maximum backfill volume
-            dilute - dilution var str e.g. log2, 1/2, etc. TODO: Replace with ENUM
+            dilute - dilution var str e.g. log2, 1/2, etc.
             steps - number of steps to dilute by
+            dilute_start=30 - max concentration in plate of compound
         returns:
             transVol - transferVolume numbers in list
             backVol - backfill numbers in list
+            dilution - concentration 
         """
         
         if(dilute == 'log2'):
@@ -236,10 +252,10 @@ class Plate:
         else:
             func = lambda x: 1/x # that could be a problem, probably not
             
-        transVol, backVol, dilution = [],[],[]
+        transVol, backVol, dilution, concentration = [],[],[], []
         
-        trans = max_back # amount of liquid in well
-        back = 0
+        trans = (max_back*dilute_start)/10000 # 10000 umol
+        back = max_back - trans
         d = dilute_start
         
         transVol.append(trans)
@@ -309,51 +325,30 @@ class Plate:
             'sourceWell':[sourceWell for i in range(len(destWell))],
             'destID':[destID for i in range(len(destWell))], # destination plate ID
             'destWell':destWell,
-            'transferVol':[],
-            'backfillVol':[],
-            'dilution':[],
+            'transferVol (nL)':[],
+            'backfillVol (nL)':[],
+            'concentration (μM)':[],
             'compound':[compound for i in range(len(destWell))]
         }
         
         for _ in range(nlicate):
-            data['transferVol'] +=transVol
-            data['backfillVol'] +=backVol
-            data['dilution'] += dilution
+            data['transferVol (nL)'] +=transVol
+            data['backfillVol (nL)'] +=backVol
+            data['concentration (μM)'] += dilution
+
         
         return pd.DataFrame.from_dict(data)
-        
-    def get_rand(self, rows):
-        """
-        helper function to randomly select a row[3-21] and columns [A-P]
-        args:
-            row - list of currently used rows
-        params:
-            newID - entry location [A-P][3-21]
-        """
-        open_rows = [str(x) for x in range(3,22)]
-        row = random.choice(open_rows)
-        col = random.choice(well_rows)
-        
-        newID = col+row
-        if newID in rows:
-            return self.get_rand(rows) # oh yeah baby recursion 
-        else:
-            return newID
-
-    def rand_wellID(self, df):
+    
+    def rand_well(self):
         """
         randomizes wellIDs of dataframe
-        args:
-            df - existing dataframe
         return:
-            rand_df - randomized dataframe 
+            dt - dataframe with randomized destWells 
         """
-        dt = df
-        dt['destWell'] = [None]*len(df['destWell']) 
-        for n in range(len(df['destWell'])):
-            # do something
-            newID = self.get_rand(dt['destWell'])
-            dt['destWell'][n]=newID
+        dt = self.plate
+        rows = dt['destWell'].tolist()
+        random.shuffle(rows)
+        dt['destWell'] = rows
         return dt
 
     def make_compound(self, destplate, max_back, dilute, sId, sW, comp, startCol, startRow,  steps=5):
@@ -401,9 +396,9 @@ class Plate:
             'sourceWell':['NC' for i in range(len(neg_row))],
             'destID':[destID for i in range(len(neg_row))], # destination plate ID
             'destWell':neg_row,
-            'transferVol':[0.0 for i in range(len(neg_row))],
-            'backfillVol':[0.0 for i in range(len(neg_row))],
-            'dilution':[0.0 for i in range(len(neg_row))],
+            'transferVol (nL)':[0.0 for i in range(len(neg_row))],
+            'backfillVol (nL)':[0.0 for i in range(len(neg_row))],
+            'concentration (μM)':[0.0 for i in range(len(neg_row))],
             'compound':['NC' for i in range(len(neg_row))]
         })
         
@@ -412,9 +407,9 @@ class Plate:
             'sourceWell':['PC' for i in range(len(pos_row))],
             'destID':[destID for i in range(len(pos_row))], # destination plate ID
             'destWell':pos_row,
-            'transferVol':[0.0 for i in range(len(pos_row))],
-            'backfillVol':[0.0 for i in range(len(pos_row))],
-            'dilution':[0.0 for i in range(len(pos_row))],
+            'transferVol (nL)':[0.0 for i in range(len(pos_row))],
+            'backfillVol (nL)':[0.0 for i in range(len(pos_row))],
+            'concentration (μM)':[0.0 for i in range(len(pos_row))],
             'compound':['PC' for i in range(len(pos_row))]
         })
         
@@ -455,9 +450,9 @@ class Plate:
             'sourceWell':['EMPTY' for i in range(len(wells))],
             'destID':[destID for i in range(len(wells))], # destination plate ID
             'destWell':wells,
-            'transferVol':[-1 for i in range(len(wells))],
-            'backfillVol':[-1 for i in range(len(wells))],
-            'dilution':[-1 for i in range(len(wells))],
+            'transferVol (nL)':[-1 for i in range(len(wells))],
+            'backfillVol (nL)':[-1 for i in range(len(wells))],
+            'concentration (μM)':[0.0 for i in range(len(wells))],
             'compound':['EMPTY' for i in range(len(wells))]
         })
 
@@ -477,10 +472,11 @@ class Plate:
             'sourceWell':['EMPTY' for i in range(len(miss))],
             'destID':[self.destField.value for i in range(len(miss))], # destination plate ID
             'destWell':miss,
-            'transferVol':[0.0 for i in range(len(miss))],
-            'backfillVol':[0.0 for i in range(len(miss))],
-            'dilution':[0.0 for i in range(len(miss))],
+            'transferVol (nL)':[0.0 for i in range(len(miss))],
+            'backfillVol (nL)':[0.0 for i in range(len(miss))],
+            'concentration (μM)':[0.0 for i in range(len(miss))],
             'compound':['EMPTY' for i in range(len(miss))]
+            
         })
         
         # return miss_dat
@@ -509,11 +505,15 @@ class Plate:
 
     def load_plate(self, filename):
         self.plate = pd.read_csv(filename)
+        self.data = self.plate.to_dict('list')
 
     def make_table(self):
-        filename = f'{self.out_dir}/{self.destField.value}_table.csv'
         dt = self.plate
-        dt[['row', 'col']] = self.plate['destWell'].str.extract('([A-Z])([0-9]{2})',expand=True)
-        dt.sort_values('col')
-        self.table = dt.pivot_table(index=['row'],columns='col', values='compound', aggfunc=lambda x: ' '.join(x))
+        dt[['row', 'col']] = dt['destWell'].str.extract('([A-Z])([0-9]{2})',expand=True)
+        dt['name'] = dt['compound']+'_'+dt['concentration (μM)'].astype('str')
+        dt.sort_values(['col','row'])
+        self.table = dt.pivot_table(index=['row'],columns='col', values='name', aggfunc=lambda x: ' '.join(x))
+    
+    def save_table(self):
+        filename = f'{self.out_dir}/{self.destField.value}_table.csv'
         self.table.to_csv(filename, index=False)
